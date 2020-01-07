@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 import json
+import gensim
 import pickle
 import StringIO
 import sys
@@ -28,8 +29,14 @@ class ScoringService(object):
     def get_model(cls):
         """Get the model object for this instance, loading it if it's not already loaded."""
         if cls.model == None:
-            with open(os.path.join(model_path, 'decision-tree-model.pkl'), 'r') as inp:
-                cls.model = pickle.load(inp)
+            # load the gensim model
+            w2v_model = gensim.models.Word2Vec.load("word2vec_2.model")
+            # keep only the normalized vectors.
+            # This saves memory but makes the model untrainable (read-only).
+            w2v_model.init_sims(replace=True)
+            # with open(os.path.join(model_path, 'decision-tree-model.pkl'), 'r') as inp:
+            #     cls.model = pickle.load(inp)
+            cls.model = w2v_model
         return cls.model
 
     @classmethod
@@ -49,6 +56,10 @@ app = flask.Flask(__name__)
 def ping():
     """Determine if the container is working and healthy. In this sample container, we declare
     it healthy if we can load the model successfully."""
+    folders = [f for f in glob.glob(model_path+'/*')]
+    for f in folders:
+        print(f)
+
     health = ScoringService.get_model() is not None  # You can insert a health check here
 
     status = 200 if health else 404
